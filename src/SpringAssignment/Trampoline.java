@@ -49,13 +49,10 @@ public class Trampoline extends AbstractSimulation {
 		 * assumes that the object is not touching the spring
 		 * make "touching" false in all spring particles
 		 */
-		System.out.println(particles.get(51).ypos + "  y");
-		System.out.println(particles.get(51).xpos + "  x");
-		System.out.println();
 		touching = false;
-//		for (int i = 0; i < particles.size(); i++) {
-//			particles.get(i).touching=false;
-//		}
+		for (int i = 0; i < particles.size(); i++) {
+			particles.get(i).touching=false;
+		}
 
 		/**
 		 * Uses istouching() to check which particles are close enough to be touching
@@ -87,6 +84,17 @@ public class Trampoline extends AbstractSimulation {
 		 * calculate the forces on each spring particle
 		 */
 		springforces();
+		
+		/**
+		 * If the spring is moving away from the object, they do not interact, so set the touching to false
+		 */
+		if (touching==true) {
+			if (findspringveloy(particles.get(touchingparticle)) < findobjectveloy(object)) {
+				touching = false;
+			}
+		}
+		
+		
 
 		/**
 		 * if touching==false, move the object as if it is only under the force of gravity
@@ -97,10 +105,6 @@ public class Trampoline extends AbstractSimulation {
 			object.ypos += object.veloy*t + (-4.9)*t*t;
 			object.c.setXY(object.xpos, object.ypos);
 		}
-		if (touching==true) {
-			System.out.println("touching is true in do-step before 'moveparticles'");
-			System.out.println(particles.get(touchingparticle).forcey);
-		}
 		
 
 		/**
@@ -109,7 +113,8 @@ public class Trampoline extends AbstractSimulation {
 		 * if "touching" is true
 		 * 
 		 */
-		moveparticles();
+		moveparticles2();
+//		moveparticles();
 
 
 		time++;
@@ -124,7 +129,7 @@ public class Trampoline extends AbstractSimulation {
 		control.setValue("Particle Mass", .4);
 		control.setValue("Particle X", 0);
 		control.setValue("Particle Y", 10);
-		control.setValue("Object Mass", 10);
+		control.setValue("Object Mass", 100);
 		time=0;
 		frame.clearDrawables();
 		particles.clear();
@@ -159,6 +164,7 @@ public class Trampoline extends AbstractSimulation {
 
 		object.create(control.getDouble("Particle X"), control.getDouble("Particle Y"), 0, 0, control.getDouble("Object Mass"));
 		frame.addDrawable(object.c);
+		
 
 	}
 
@@ -172,7 +178,7 @@ public class Trampoline extends AbstractSimulation {
 	public void istouching(SpringParticle spring, Particle object) {
 		spring.prevtouch=spring.touching;
 		distance = Math.sqrt((spring.xpos-object.xpos)*(spring.xpos-object.xpos) + (spring.ypos-object.ypos)*(spring.ypos-object.ypos));
-		if (distance < .05) {
+		if (distance < .75) {
 			spring.touching = true;
 			touching = true;
 		} else {
@@ -196,22 +202,29 @@ public class Trampoline extends AbstractSimulation {
 		return min;
 	}
 	public void moveparticles() {
+		System.out.println(object.veloy);
+		System.out.println();
 		for (int i = 1; i < particles.size(); i++) {
-
+			
 			if (particles.get(i).touching==true) {
+				System.out.println(particles.get(i).veloy);
+				
 				System.out.println(particles.get(i).prevtouch);
 				if (particles.get(i).prevtouch == true) {
-					
 					System.out.println("touch " + i);
+					
+					particles.get(i).forcey +=-9.8*object.mass;
+					
 					particles.get(i).yacceleration=particles.get(i).forcey/(particles.get(i).mass+object.mass);
 					particles.get(i).xacceleration=particles.get(i).forcex/(particles.get(i).mass+object.mass);
+					
+					particles.get(i).veloy += particles.get(i).yacceleration*t;
+					particles.get(i).velox += particles.get(i).xacceleration*t;
+					
 					
 					object.yacceleration=particles.get(i).forcey/(particles.get(i).mass+object.mass);
 					object.xacceleration=particles.get(i).forcex/(particles.get(i).mass+object.mass);
 
-
-					particles.get(i).veloy += particles.get(i).yacceleration*t;
-					particles.get(i).velox += particles.get(i).xacceleration*t;
 					
 					object.veloy += object.yacceleration*t;
 					object.velox += object.xacceleration*t;
@@ -223,14 +236,15 @@ public class Trampoline extends AbstractSimulation {
 
 					particles.get(i).c.setXY(particles.get(i).xpos, particles.get(i).ypos);
 					object.c.setXY(object.xpos, object.ypos);
+					
 				} else {
 					System.out.println("first touch");
 					collision(object, particles.get(i));
 					
 					particles.get(i).yacceleration=particles.get(i).forcey/(particles.get(i).mass+object.mass);
 					particles.get(i).xacceleration=particles.get(i).forcex/(particles.get(i).mass+object.mass);
-//					object.yacceleration=particles.get(i).forcey/(particles.get(i).mass+object.mass);
-//					object.xacceleration=particles.get(i).forcex/(particles.get(i).mass+object.mass);
+//					object.yacceleration=particles.get(i).yacceleration;
+//					object.xacceleration=particles.get(i).xacceleration;
 
 
 					particles.get(i).veloy += particles.get(i).yacceleration*t;
@@ -240,14 +254,16 @@ public class Trampoline extends AbstractSimulation {
 
 					particles.get(i).ypos += particles.get(i).veloy*t;
 					particles.get(i).xpos += particles.get(i).velox*t;
-					object.ypos += particles.get(i).veloy*t;
-					object.xpos += particles.get(i).velox*t;
+					object.ypos = particles.get(i).ypos;
+					object.xpos = particles.get(i).xpos;
 //					object.ypos += object.veloy*t;
 //					object.xpos += object.velox*t;
 
 					particles.get(i).c.setXY(particles.get(i).xpos, particles.get(i).ypos);
 					
 					object.c.setXY(object.xpos, object.ypos);
+					object.velox=0;
+					object.veloy=0;
 				}
 
 
@@ -338,6 +354,80 @@ public class Trampoline extends AbstractSimulation {
 			}
 
 
+		}
+	}
+	public double findspringveloy(SpringParticle particle){
+		double yacceleration = particle.forcey/particle.mass;
+		double veloy = particle.veloy + yacceleration*t;
+		return veloy;
+	}
+	public double findobjectveloy(Particle object) {
+		double yacceleration = object.forcey/object.mass;
+		double veloy = object.veloy + yacceleration*t;
+		return veloy;
+	}
+	public void elasticcollision(SpringParticle particle, Particle object) {
+		double m1 = particle.mass;
+		//particle velo before collision
+		double vy1b = particle.veloy;
+		double vx1b = particle.velox;
+		double m2 = object.mass;
+		//object velo before collision
+		double vy2b = object.veloy;
+		double vx2b = object.velox;
+		
+		
+		double vy2a= (((2*m1)/(m1+m2))*vy1b) - (((m1-m2)/(m1+m2))*vy2b);
+		
+		double vy1a= (((m1-m2)/(m1+m2))*vy1b) + (((2*m2)/(m1+m2))*vy2b);
+		
+		double vx2a= (((2*m1)/(m1+m2))*vx1b) - (((m1-m2)/(m1+m2))*vx2b);
+		
+		double vx1a= (((m1-m2)/(m1+m2))*vx1b) + (((2*m2)/(m1+m2))*vx2b);
+		
+		particle.veloy = vy1a;
+		particle.velox = vx1a;
+		System.out.println(particle.veloy);
+		object.veloy = vy2a;
+		object.velox = vx2a;
+		System.out.println(object.veloy);
+		
+	}
+	public void moveparticles2(){
+		for (int i = 0; i < particles.size(); i++) {
+			if (particles.get(i).touching == true) {
+				elasticcollision(particles.get(i), object);
+				particles.get(i).veloy += (particles.get(i).forcey/(particles.get(i).mass+object.mass))*t;
+				particles.get(i).velox += (particles.get(i).forcex/(particles.get(i).mass+object.mass))*t;
+				
+				object.veloy += (particles.get(i).forcey/(particles.get(i).mass+object.mass))*t;
+				object.velox += (particles.get(i).forcex/(particles.get(i).mass+object.mass))*t;
+				
+				particles.get(i).ypos += particles.get(i).veloy*t;
+				particles.get(i).xpos += particles.get(i).velox*t;
+				object.ypos += object.veloy*t;
+				object.xpos += object.velox*t;
+				
+				if (particles.get(i).ypos>object.ypos) {
+					particles.get(i).ypos=object.ypos-.5;
+				}
+				
+				
+				particles.get(i).c.setXY(particles.get(i).xpos, particles.get(i).ypos);
+				object.c.setXY(object.xpos, object.ypos);
+				
+			} else {
+				particles.get(i).yacceleration=particles.get(i).forcey/particles.get(i).mass;
+				particles.get(i).xacceleration=particles.get(i).forcex/particles.get(i).mass;
+
+				particles.get(i).veloy += particles.get(i).yacceleration*t;
+				particles.get(i).velox += particles.get(i).xacceleration*t;
+
+				particles.get(i).ypos += particles.get(i).veloy*t;
+				particles.get(i).xpos += particles.get(i).velox*t;
+
+				particles.get(i).c.setXY(particles.get(i).xpos, particles.get(i).ypos);
+			}
 		}
 	}
 }
